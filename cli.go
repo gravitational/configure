@@ -72,6 +72,10 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 			f.SetValue(&cliValue{setter: setter})
 			continue
 		}
+		if setter, ok := fieldPtr.(StringSetter); ok {
+			f.SetValue(&cliValue{setter: &cliStringSetter{setter: setter}})
+			continue
+		}
 		switch ptr := fieldPtr.(type) {
 		case *map[string]string:
 			f.SetValue(&cliMapValue{v: ptr})
@@ -97,6 +101,14 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 		}
 	}
 	return nil
+}
+
+type cliStringSetter struct {
+	setter StringSetter
+}
+
+func (s *cliStringSetter) SetCLI(v string) error {
+	return s.setter.Set(v)
 }
 
 type cliValue struct {

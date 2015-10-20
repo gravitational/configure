@@ -27,6 +27,11 @@ type EnvSetter interface {
 	SetEnv(string) error
 }
 
+// StringSetter is an interface that allows to set variable from any string
+type StringSetter interface {
+	Set(string) error
+}
+
 func setEnv(v reflect.Value, env map[string]string) error {
 	// for structs, walk every element and parse
 	vType := v.Type()
@@ -59,6 +64,12 @@ func setEnv(v reflect.Value, env map[string]string) error {
 		if field.CanAddr() {
 			if s, ok := field.Addr().Interface().(EnvSetter); ok {
 				if err := s.SetEnv(val); err != nil {
+					return trace.Wrap(err)
+				}
+				continue
+			}
+			if s, ok := field.Addr().Interface().(StringSetter); ok {
+				if err := s.Set(val); err != nil {
 					return trace.Wrap(err)
 				}
 				continue
