@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gravitational/configure/cstrings"
 	"github.com/gravitational/trace"
 )
 
@@ -18,7 +19,7 @@ func (kv *KeyVal) Set(v string) error {
 	if len(*kv) == 0 {
 		*kv = make(map[string]string)
 	}
-	for _, i := range SplitComma(v) {
+	for _, i := range cstrings.SplitComma(v) {
 		vals := strings.SplitN(i, ":", 2)
 		if len(vals) != 2 {
 			return trace.Errorf("extra options should be defined like KEY:VAL")
