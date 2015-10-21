@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gravitational/orbit/Godeps/_workspace/src/github.com/gravitational/trace"
-	"github.com/gravitational/orbit/Godeps/_workspace/src/gopkg.in/alecthomas/kingpin.v2"
-	"github.com/gravitational/orbit/lib/utils"
+	"github.com/gravitational/configure/cstrings"
+	"github.com/gravitational/trace"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type Config struct {
@@ -417,7 +417,7 @@ func (p *ListParam) EnvName() string {
 
 func (p *ListParam) Set(s string) error {
 	// this is to support setting from environment variables
-	values := utils.Split(',', '\\', s)
+	values := cstrings.Split(',', '\\', s)
 	for _, v := range values {
 		el := p.el.New()
 		if err := el.Set(v); err != nil {

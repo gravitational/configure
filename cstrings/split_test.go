@@ -1,8 +1,12 @@
-package configure
+package cstrings
 
 import (
+	"testing"
+
 	. "gopkg.in/check.v1"
 )
+
+func TestStrings(t *testing.T) { TestingT(t) }
 
 type USuite struct {
 }
