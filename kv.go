@@ -8,6 +8,7 @@ import (
 
 	"github.com/gravitational/configure/cstrings"
 	"github.com/gravitational/trace"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // KeyVal is map that can parse itself from string, represented as a
@@ -46,6 +47,14 @@ func (kv *KeyVal) String() string {
 		fmt.Fprintf(b, " ")
 	}
 	return b.String()
+}
+
+// KeyValParam accepts a kingpin setting parameter and returns
+// kingpin-compatible value
+func KeyValParam(s kingpin.Settings) *KeyVal {
+	kv := make(KeyVal)
+	s.SetValue(&kv)
+	return &kv
 }
 
 // KeyValSlice is a list of key value strings
