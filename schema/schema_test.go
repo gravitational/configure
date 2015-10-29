@@ -430,6 +430,19 @@ func (s *ConfigSuite) TestParseVars(c *C) {
 			expect: map[string]string{"string1": "val1"},
 		},
 		{
+			name: "int param default",
+			cfg: `{
+                 "params": [
+                     {
+                       "name": "int1",
+                       "type": "Int",
+                       "default": "-1"
+                     }
+                  ]
+               }`,
+			expect: map[string]string{"int1": "-1"},
+		},
+		{
 			name: "list of key values",
 			cfg: `{
                  "params": [

@@ -76,7 +76,15 @@ func (c *Config) ParseEnv() error {
 
 func (c *Config) ParseVars(vars map[string]string) error {
 	for _, p := range c.Params {
-		if err := p.Set(vars[p.Name()]); err != nil {
+		val, ok := vars[p.Name()]
+		if !ok {
+			if p.Required() {
+				return trace.Errorf("missing value for required variable: %v", p.Name())
+			} else {
+				val = p.Default()
+			}
+		}
+		if err := p.Set(val); err != nil {
 			return trace.Wrap(err)
 		}
 	}
