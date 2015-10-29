@@ -410,6 +410,65 @@ func (s *ConfigSuite) TestEnvVars(c *C) {
 	}
 }
 
+func (s *ConfigSuite) TestParseVars(c *C) {
+	tcs := []struct {
+		name   string
+		cfg    string
+		expect map[string]string
+	}{
+		{
+			name: "string param",
+			cfg: `{
+                 "params": [
+                     {
+                       "env": "ENV_STRING1",
+                       "name": "string1",
+                       "type": "String"
+                     }
+                  ]
+               }`,
+			expect: map[string]string{"string1": "val1"},
+		},
+		{
+			name: "list of key values",
+			cfg: `{
+                 "params": [
+                     {
+                         "type": "List",
+                         "name": "mounts",
+                         "spec": {
+                            "name": "volume",
+                            "type": "KeyVal",
+                            "spec": {
+                              "keys": [
+                                  {"name": "src", "type":"Path"},
+                                  {"name": "dst", "type":"Path"}
+                              ]
+                            }
+                        }
+                     }
+                  ]
+               }`,
+			expect: map[string]string{
+				"mounts": "/tmp/hello:/var/hello,/tmp/hello1:/var/hello2",
+			},
+		},
+	}
+	for i, tc := range tcs {
+		comment := Commentf(
+			"test #%d (%v) cfg=%v", i+1, tc.name, tc.cfg)
+		cfg, err := ParseJSON(strings.NewReader(tc.cfg))
+		c.Assert(err, IsNil, comment)
+
+		vars := make(map[string]string)
+		for k, v := range tc.expect {
+			vars[k] = v
+		}
+		c.Assert(cfg.ParseVars(vars), IsNil)
+		c.Assert(cfg.Vars(), DeepEquals, tc.expect, comment)
+	}
+}
+
 func str(val string) *string {
 	return &val
 }

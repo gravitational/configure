@@ -14,8 +14,35 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+func ParseJSON(r io.Reader) (*Config, error) {
+	var c *configV1
+
+	if err := json.NewDecoder(r).Decode(&c); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return newParser().parse(*c)
+}
+
+func ParseVariablesJSON(r io.Reader) (*Config, error) {
+	var variables []paramSpec
+
+	if err := json.NewDecoder(r).Decode(&variables); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return newParser().parse(configV1{Params: variables})
+}
+
 type Config struct {
 	Params []Param
+}
+
+func (c *Config) Vars() map[string]string {
+	vars := make(map[string]string, len(c.Params))
+	for _, p := range c.Params {
+		k, v := p.Vars()
+		vars[k] = v
+	}
+	return vars
 }
 
 func (c *Config) EnvVars() map[string]string {
@@ -45,6 +72,15 @@ func (c *Config) ParseEnv() error {
 	app := cliApp(c, true)
 	_, err := app.Parse([]string{})
 	return err
+}
+
+func (c *Config) ParseVars(vars map[string]string) error {
+	for _, p := range c.Params {
+		if err := p.Set(vars[p.Name()]); err != nil {
+			return trace.Wrap(err)
+		}
+	}
+	return nil
 }
 
 func cliApp(c *Config, useEnv bool) *kingpin.Application {
@@ -96,16 +132,11 @@ type Param interface {
 
 	// Values returns a tuple with environment variable name and value
 	EnvVars() (string, string)
+
+	// Vars returns a tuple with the variable name and value
+	Vars() (string, string)
+
 	EnvName() string
-}
-
-func ParseJSON(r io.Reader) (*Config, error) {
-	var c *configV1
-
-	if err := json.NewDecoder(r).Decode(&c); err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return newParser().parse(*c)
 }
 
 func newParser() *cparser {
@@ -294,6 +325,10 @@ func (p *PathParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
 
+func (p *PathParam) Vars() (string, string) {
+	return p.Name(), p.String()
+}
+
 func (p *PathParam) Set(s string) error {
 	p.val = &s
 	return nil
@@ -335,6 +370,10 @@ func (p *StringParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
 
+func (p *StringParam) Vars() (string, string) {
+	return p.Name(), p.String()
+}
+
 type BoolParam struct {
 	paramCommon
 	val *bool
@@ -342,6 +381,10 @@ type BoolParam struct {
 
 func (p *BoolParam) New() Param {
 	return &BoolParam{p.paramCommon, nil}
+}
+
+func (p *BoolParam) Vars() (string, string) {
+	return p.Name(), p.String()
 }
 
 func (p *BoolParam) Set(s string) error {
@@ -399,6 +442,10 @@ func (p *IntParam) Args() []string {
 
 func (p *IntParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
+}
+
+func (p *IntParam) Vars() (string, string) {
+	return p.Name(), p.String()
 }
 
 type ListParam struct {
@@ -463,6 +510,17 @@ func (p *ListParam) EnvVars() (string, string) {
 		_, out[i] = v.EnvVars()
 	}
 	return p.el.EnvName(), strings.Join(out, ",")
+}
+
+func (p *ListParam) Vars() (string, string) {
+	if len(p.values) == 0 {
+		return p.Name(), p.Default()
+	}
+	out := make([]string, len(p.values))
+	for i, v := range p.values {
+		_, out[i] = v.EnvVars()
+	}
+	return p.Name(), strings.Join(out, ",")
 }
 
 type KVParam struct {
@@ -542,6 +600,17 @@ func (p *KVParam) EnvVars() (string, string) {
 	return p.EnvName(), strings.Join(vals, p.sep())
 }
 
+func (p *KVParam) Vars() (string, string) {
+	if len(p.values) == 0 {
+		return p.Name(), p.Default()
+	}
+	vals := make([]string, len(p.values))
+	for i, v := range p.values {
+		vals[i] = v.String()
+	}
+	return p.Name(), strings.Join(vals, p.sep())
+}
+
 type EnumParam struct {
 	paramCommon
 	values []string
@@ -585,4 +654,8 @@ func (p *EnumParam) Args() []string {
 
 func (p *EnumParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
+}
+
+func (p *EnumParam) Vars() (string, string) {
+	return p.Name(), p.String()
 }
