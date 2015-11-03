@@ -49,3 +49,24 @@ func (s *USuite) TestSplit(c *C) {
 		c.Assert(out, DeepEquals, t.expect, comment)
 	}
 }
+
+func (s *USuite) TestDomain(c *C) {
+	tcs := []struct {
+		name     string
+		expected bool
+	}{
+		{name: "domain.com", expected: true},
+		{name: "domain com", expected: false},
+		{name: "A-z.com", expected: true},
+		{name: " ", expected: false},
+		{name: ".", expected: false},
+	}
+
+	for i, t := range tcs {
+		comment := Commentf(
+			"test case #%v: name: %v expected %v",
+			i, t.name, t.expected)
+		valid := IsValidDomainName(t.name)
+		c.Assert(valid, Equals, t.expected, comment)
+	}
+}
