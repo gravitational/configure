@@ -16,6 +16,8 @@ limitations under the License.
 package configure
 
 import (
+	"os"
+
 	"github.com/gravitational/configure/test"
 	"github.com/gravitational/log"
 	. "gopkg.in/check.v1"
@@ -46,4 +48,18 @@ nested:
 	err := ParseYAML([]byte(raw), &cfg)
 	c.Assert(err, IsNil)
 	s.CheckVariables(c, &cfg)
+}
+
+func (s *YAMLSuite) TestParseTemplate(c *C) {
+	type config struct {
+		Data string `yaml:"data"`
+	}
+	os.Setenv("TEST_VAR1", "test var 1")
+
+	raw := `data: {{env "TEST_VAR1"}}`
+
+	var cfg config
+	err := ParseYAML([]byte(raw), &cfg, EnableTemplating())
+	c.Assert(err, IsNil)
+	c.Assert(cfg.Data, Equals, "test var 1")
 }
