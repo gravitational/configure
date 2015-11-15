@@ -17,7 +17,6 @@ package jsonschema
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -155,31 +154,6 @@ func getProperties(schema map[string]interface{}, name string) (map[string]inter
 		return nil, false
 	}
 	return v, true
-}
-
-func getObjProp(iobj interface{}, name string) map[string]interface{} {
-	fmt.Printf("get obj prop: %v %T %v\n", iobj, iobj, name)
-	obj, ok := iobj.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	i, ok := obj[name]
-	if !ok {
-		return nil
-	}
-	v, ok := i.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	return v
-}
-
-func setObjProp(iobj interface{}, name string, val interface{}) {
-	obj, ok := iobj.(map[string]interface{})
-	if !ok {
-		return
-	}
-	obj[name] = val
 }
 
 func schemaErrors(errors []gojsonschema.ResultError) string {
