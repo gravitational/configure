@@ -24,6 +24,8 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// JSONSchema is a wrapper around gojsonschema that supports
+// default variables
 type JSONSchema struct {
 	// schema specifies site-specific provisioning and installation
 	// instructions expressed as JSON schema
@@ -33,6 +35,8 @@ type JSONSchema struct {
 	rawSchema map[string]interface{}
 }
 
+// New returns JSON schema created from JSON byte string
+// returns a valid schema or error if schema is invalid
 func New(data []byte) (*JSONSchema, error) {
 	j := JSONSchema{}
 	err := json.Unmarshal(data, &j.rawSchema)
@@ -48,6 +52,8 @@ func New(data []byte) (*JSONSchema, error) {
 	return &j, nil
 }
 
+// ProcessObject checks the if object is valid from this schema's standpoint
+// and returns an object with defaults set up according to schema's spec
 func (j *JSONSchema) ProcessObject(in interface{}) (interface{}, error) {
 	result, err := j.schema.Validate(gojsonschema.NewGoLoader(in))
 	if err != nil {
