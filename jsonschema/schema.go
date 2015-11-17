@@ -52,7 +52,7 @@ func New(data []byte) (*JSONSchema, error) {
 	return &j, nil
 }
 
-// ProcessObject checks the if object is valid from this schema's standpoint
+// ProcessObject checks if the object is valid from this schema's standpoint
 // and returns an object with defaults set up according to schema's spec
 func (j *JSONSchema) ProcessObject(in interface{}) (interface{}, error) {
 	result, err := j.schema.Validate(gojsonschema.NewGoLoader(in))
