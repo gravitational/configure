@@ -156,6 +156,34 @@ func ParentIs(name xml.Name) ConditionFunc {
 	}
 }
 
+// GetAttribute returns attribute value if it's present, otherwise
+// it returns an empty string
+func GetAttribute(e xml.StartElement, name xml.Name) string {
+	if len(e.Attr) == 0 {
+		return ""
+	}
+	for _, a := range e.Attr {
+		if NameEquals(a.Name, name) {
+			return a.Value
+		}
+	}
+	return ""
+}
+
+// HasAttribute returns true if element has an attribute with given
+// name, false otherwise
+func HasAttribute(e xml.StartElement, name xml.Name) bool {
+	if len(e.Attr) == 0 {
+		return false
+	}
+	for _, a := range e.Attr {
+		if NameEquals(name, a.Name) {
+			return true
+		}
+	}
+	return false
+}
+
 type NodeList struct {
 	nodes []xml.StartElement
 }
