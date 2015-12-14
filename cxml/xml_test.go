@@ -52,7 +52,7 @@ func (s *SchemaSuite) TestRecordNodes(c *C) {
 		}
 		if len(parents.nodes) != 0 {
 			for _, name := range parents.nodes {
-				n.parents = append(n.parents, fmt.Sprintf("<%v>", name.Local))
+				n.parents = append(n.parents, fmt.Sprintf("<%v>", name.Name.Local))
 			}
 		}
 		nodes = append(nodes, n)

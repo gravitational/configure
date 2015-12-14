@@ -56,7 +56,7 @@ func TransformXML(r io.Reader, w io.Writer, fn TransformFunc, indent bool) error
 		}
 		switch e := token.(type) {
 		case xml.StartElement:
-			parentNodes.Push(e.Name)
+			parentNodes.Push(e)
 		case xml.EndElement:
 			parentNodes.Pop()
 		}
@@ -149,20 +149,20 @@ func Combine(funcs ...TransformFunc) TransformFunc {
 }
 
 type NodeList struct {
-	nodes []*xml.Name
+	nodes []xml.StartElement
 }
 
-func (n *NodeList) Push(node xml.Name) {
-	n.nodes = append(n.nodes, &node)
+func (n *NodeList) Push(node xml.StartElement) {
+	n.nodes = append(n.nodes, node)
 }
 
-func (n *NodeList) Pop() *xml.Name {
+func (n *NodeList) Pop() *xml.StartElement {
 	if len(n.nodes) == 0 {
 		return nil
 	}
 	node := n.nodes[len(n.nodes)-1]
 	n.nodes = n.nodes[:len(n.nodes)-1]
-	return node
+	return &node
 }
 
 // ParentIs returns true if last element exists and
@@ -171,7 +171,7 @@ func (n *NodeList) ParentIs(a xml.Name) bool {
 	if len(n.nodes) == 0 {
 		return false
 	}
-	return NameEquals(a, *n.nodes[len(n.nodes)-1])
+	return NameEquals(a, n.nodes[len(n.nodes)-1].Name)
 }
 
 // NameEquals return true if both namespaces and local names of nodes
