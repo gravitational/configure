@@ -18,6 +18,7 @@ package cxml
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -31,6 +32,48 @@ type SchemaSuite struct {
 
 var _ = Suite(&SchemaSuite{})
 
+func (s *SchemaSuite) TestRecordNodes(c *C) {
+	tree := `<xml><a><b/><c/><data>value</data></a></xml>`
+	buffer := &bytes.Buffer{}
+	type node struct {
+		node    string
+		parents []string
+	}
+	nodes := []node{}
+	err := TransformXML(strings.NewReader(tree), buffer, func(parents *NodeList, el xml.Token) []xml.Token {
+		n := node{}
+		switch e := el.(type) {
+		case xml.CharData:
+			n.node = string(e)
+		case xml.StartElement:
+			n.node = fmt.Sprintf("<%v>", e.Name.Local)
+		default:
+			return []xml.Token{el}
+		}
+		if len(parents.nodes) != 0 {
+			for _, name := range parents.nodes {
+				n.parents = append(n.parents, fmt.Sprintf("<%v>", name.Local))
+			}
+		}
+		nodes = append(nodes, n)
+		return []xml.Token{el}
+	}, true)
+	c.Assert(err, IsNil)
+	expected := []node{
+		{node: "<xml>"},
+		{node: "<a>", parents: []string{"<xml>"}},
+		{node: "<b>", parents: []string{"<xml>", "<a>"}},
+		{node: "<c>", parents: []string{"<xml>", "<a>"}},
+		{node: "<data>", parents: []string{"<xml>", "<a>"}},
+		{node: "value", parents: []string{"<xml>", "<a>", "<data>"}},
+	}
+	c.Assert(len(nodes), Equals, len(expected))
+	for i := range nodes {
+		c.Assert(nodes[i], DeepEquals, expected[i])
+	}
+
+}
+
 func (s *SchemaSuite) TestCases(c *C) {
 	type tc struct {
 		in  string
@@ -42,7 +85,7 @@ func (s *SchemaSuite) TestCases(c *C) {
 		{
 			in:  `<xml><source file="before"></source></xml>`,
 			out: `<xml><source file="after"></source></xml>`,
-			fn: ReplaceAttributeIf("file", "after", func(el xml.Token) bool {
+			fn: ReplaceAttributeIf("file", "after", func(parents *NodeList, el xml.Token) bool {
 				e, ok := el.(xml.StartElement)
 				if !ok {
 					return false
@@ -53,19 +96,27 @@ func (s *SchemaSuite) TestCases(c *C) {
 		{
 			in:  `<xml><node></node></xml>`,
 			out: `<xml><node></node><disk type="file"></disk></xml>`,
-			fn: InjectNodes(xml.Name{Local: "xml"}, []xml.Token{
+			fn: InjectNodesIf([]xml.Token{
 				xml.StartElement{
 					Name: xml.Name{Local: "disk"},
 					Attr: []xml.Attr{{
 						Name:  xml.Name{Local: "type"},
 						Value: "file"}}},
 				xml.EndElement{Name: xml.Name{Local: "disk"}},
+			}, func(parents *NodeList, el xml.Token) bool {
+				endEl, ok := el.(xml.EndElement)
+				if !ok {
+					return false
+				}
+				return endEl.Name.Local == "xml" && parents.ParentIs(xml.Name{Local: "xml"})
 			}),
 		},
 		{
 			in:  `<xml><node>prev value</node><other>other</other></xml>`,
 			out: `<xml><node>new value</node><other>other</other></xml>`,
-			fn:  ReplaceCDATA(xml.Name{Local: "node"}, "new value"),
+			fn: ReplaceCDATAIf([]byte("new value"), func(parents *NodeList, el xml.Token) bool {
+				return parents.ParentIs(xml.Name{Local: "node"})
+			}),
 		},
 	}
 
