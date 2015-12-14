@@ -108,15 +108,15 @@ func (s *SchemaSuite) TestCases(c *C) {
 				if !ok {
 					return false
 				}
-				return endEl.Name.Local == "xml" && parents.ParentIs(xml.Name{Local: "xml"})
+				return endEl.Name.Local == "xml" && parents.ParentIs(
+					xml.Name{Local: "xml"})
 			}),
 		},
 		{
 			in:  `<xml><node>prev value</node><other>other</other></xml>`,
 			out: `<xml><node>new value</node><other>other</other></xml>`,
-			fn: ReplaceCDATAIf([]byte("new value"), func(parents *NodeList, el xml.Token) bool {
-				return parents.ParentIs(xml.Name{Local: "node"})
-			}),
+			fn: ReplaceCDATAIf(
+				[]byte("new value"), ParentIs(xml.Name{Local: "node"})),
 		},
 	}
 

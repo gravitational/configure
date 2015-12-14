@@ -148,6 +148,14 @@ func Combine(funcs ...TransformFunc) TransformFunc {
 	}
 }
 
+// ParentIs is a functon that returns ConditionFunc checking
+// if immediate parent's name matches name
+func ParentIs(name xml.Name) ConditionFunc {
+	return func(parents *NodeList, el xml.Token) bool {
+		return parents.ParentIs(name)
+	}
+}
+
 type NodeList struct {
 	nodes []xml.StartElement
 }
