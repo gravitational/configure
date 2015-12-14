@@ -122,7 +122,7 @@ func ReplaceAttributeIf(attrName, attrValue string, cond ConditionFunc) Transfor
 
 // TrimSpace is a transformer function that replaces CDATA with blank
 // characters with empty strings
-func TrimSpace(in xml.Token) []xml.Token {
+func TrimSpace(parents *NodeList, in xml.Token) []xml.Token {
 	switch t := in.(type) {
 	case xml.CharData:
 		if strings.TrimSpace(string(t)) == "" {
