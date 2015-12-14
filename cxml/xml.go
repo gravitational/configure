@@ -184,6 +184,11 @@ func HasAttribute(e xml.StartElement, name xml.Name) bool {
 	return false
 }
 
+// Name returns an xml.Name with local part set to name
+func Name(name string) xml.Name {
+	return xml.Name{Local: name}
+}
+
 type NodeList struct {
 	nodes []xml.StartElement
 }
