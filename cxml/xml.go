@@ -16,9 +16,9 @@ limitations under the License.
 package cxml
 
 import (
+	"bytes"
 	"encoding/xml"
 	"io"
-	"strings"
 
 	"github.com/gravitational/trace"
 )
@@ -28,21 +28,16 @@ import (
 type TransformFunc func(parents *NodeList, in xml.Token) []xml.Token
 
 // ConditionFunc is accepted by some transform function generators
-// so they could be applied conditionaly
+// so they could be applied conditionally
 type ConditionFunc func(parents *NodeList, in xml.Token) bool
 
 // TransformXML parses the XML tree, traverses it and calls TransformFunc
 // on each XML token, writing the output to the writer, resulting in a
 // transformed XML tree
-func TransformXML(r io.Reader, w io.Writer, fn TransformFunc, indent bool) error {
-	parser := xml.NewDecoder(r)
-	encoder := xml.NewEncoder(w)
-	if indent {
-		encoder.Indent("  ", "    ")
-	}
+func TransformXML(decoder *xml.Decoder, encoder *xml.Encoder, fn TransformFunc) error {
 	parentNodes := &NodeList{}
 	for {
-		token, err := parser.Token()
+		token, err := decoder.Token()
 		if err != nil {
 			if err != io.EOF {
 				return trace.Wrap(err)
@@ -67,29 +62,24 @@ func TransformXML(r io.Reader, w io.Writer, fn TransformFunc, indent bool) error
 
 // SetAttribute is XML helper that allows to set attribute on a node
 func SetAttribute(e xml.StartElement, name, value string) xml.StartElement {
-	if len(e.Attr) != 0 {
-		for i := range e.Attr {
-			if e.Attr[i].Name.Local == name {
-				e.Attr[i].Value = value
-				return e
-			}
+	for i := range e.Attr {
+		if e.Attr[i].Name.Local == name {
+			e.Attr[i].Value = value
+			return e
 		}
-	} else {
-		e.Attr = append(e.Attr, xml.Attr{Name: xml.Name{Local: name}, Value: value})
 	}
+	e.Attr = append(e.Attr, xml.Attr{Name: xml.Name{Local: name}, Value: value})
 	return e
 }
 
 // ReplaceCDATAIf replaces CDATA value of the matched node
 // if the parent node name matches the name
-func ReplaceCDATAIf(val []byte, cond ConditionFunc) TransformFunc {
+func ReplaceCDATAIf(val xml.CharData, cond ConditionFunc) TransformFunc {
 	return func(parents *NodeList, in xml.Token) []xml.Token {
 		switch in.(type) {
 		case xml.CharData:
 			if cond(parents, in) {
-				data := make([]byte, len(val))
-				copy(data, val)
-				return []xml.Token{xml.CharData(data)}
+				return []xml.Token{val.Copy()}
 			}
 		}
 		return []xml.Token{in}
@@ -125,9 +115,7 @@ func ReplaceAttributeIf(attrName, attrValue string, cond ConditionFunc) Transfor
 func TrimSpace(parents *NodeList, in xml.Token) []xml.Token {
 	switch t := in.(type) {
 	case xml.CharData:
-		if strings.TrimSpace(string(t)) == "" {
-			return []xml.Token{xml.CharData("")}
-		}
+		return []xml.Token{xml.CharData(bytes.TrimSpace(t))}
 	}
 	return []xml.Token{in}
 }
@@ -159,9 +147,6 @@ func ParentIs(name xml.Name) ConditionFunc {
 // GetAttribute returns attribute value if it's present, otherwise
 // it returns an empty string
 func GetAttribute(e xml.StartElement, name xml.Name) string {
-	if len(e.Attr) == 0 {
-		return ""
-	}
 	for _, a := range e.Attr {
 		if NameEquals(a.Name, name) {
 			return a.Value
@@ -173,9 +158,6 @@ func GetAttribute(e xml.StartElement, name xml.Name) string {
 // HasAttribute returns true if element has an attribute with given
 // name, false otherwise
 func HasAttribute(e xml.StartElement, name xml.Name) bool {
-	if len(e.Attr) == 0 {
-		return false
-	}
 	for _, a := range e.Attr {
 		if NameEquals(name, a.Name) {
 			return true
@@ -197,13 +179,11 @@ func (n *NodeList) Push(node xml.StartElement) {
 	n.nodes = append(n.nodes, node)
 }
 
-func (n *NodeList) Pop() *xml.StartElement {
+func (n *NodeList) Pop() {
 	if len(n.nodes) == 0 {
-		return nil
+		return
 	}
-	node := n.nodes[len(n.nodes)-1]
 	n.nodes = n.nodes[:len(n.nodes)-1]
-	return &node
 }
 
 // ParentIs returns true if last element exists and

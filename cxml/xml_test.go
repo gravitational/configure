@@ -40,24 +40,27 @@ func (s *SchemaSuite) TestRecordNodes(c *C) {
 		parents []string
 	}
 	nodes := []node{}
-	err := TransformXML(strings.NewReader(tree), buffer, func(parents *NodeList, el xml.Token) []xml.Token {
-		n := node{}
-		switch e := el.(type) {
-		case xml.CharData:
-			n.node = string(e)
-		case xml.StartElement:
-			n.node = fmt.Sprintf("<%v>", e.Name.Local)
-		default:
-			return []xml.Token{el}
-		}
-		if len(parents.nodes) != 0 {
-			for _, name := range parents.nodes {
-				n.parents = append(n.parents, fmt.Sprintf("<%v>", name.Name.Local))
+	err := TransformXML(
+		xml.NewDecoder(strings.NewReader(tree)),
+		xml.NewEncoder(buffer),
+		func(parents *NodeList, el xml.Token) []xml.Token {
+			n := node{}
+			switch e := el.(type) {
+			case xml.CharData:
+				n.node = string(e)
+			case xml.StartElement:
+				n.node = fmt.Sprintf("<%v>", e.Name.Local)
+			default:
+				return []xml.Token{el}
 			}
-		}
-		nodes = append(nodes, n)
-		return []xml.Token{el}
-	}, true)
+			if len(parents.nodes) != 0 {
+				for _, name := range parents.nodes {
+					n.parents = append(n.parents, fmt.Sprintf("<%v>", name.Name.Local))
+				}
+			}
+			nodes = append(nodes, n)
+			return []xml.Token{el}
+		})
 	c.Assert(err, IsNil)
 	expected := []node{
 		{node: "<xml>"},
@@ -124,7 +127,9 @@ func (s *SchemaSuite) TestCases(c *C) {
 		comment := Commentf("test #%d", i+1)
 
 		out := &bytes.Buffer{}
-		err := TransformXML(strings.NewReader(tc.in), out, tc.fn, false)
+		err := TransformXML(
+			xml.NewDecoder(strings.NewReader(tc.in)),
+			xml.NewEncoder(out), tc.fn)
 		c.Assert(err, IsNil, comment)
 		c.Assert(out.String(), Equals, tc.out)
 	}
