@@ -47,3 +47,13 @@ func (s *CLISuite) TestParseEnv(c *C) {
 	c.Assert(err, IsNil)
 	s.CheckVariables(c, &cfg)
 }
+
+func (s *CLISuite) TestKeyValRoundtrip(c *C) {
+	vals := map[string]string{"a": "b", "c": "d"}
+	kv := KeyVal(vals)
+
+	kv2 := make(KeyVal)
+	c.Assert(kv2.Set(kv.String()), IsNil)
+
+	c.Assert(kv2, DeepEquals, kv)
+}
