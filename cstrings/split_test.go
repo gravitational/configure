@@ -70,3 +70,25 @@ func (s *USuite) TestDomain(c *C) {
 		c.Assert(valid, Equals, t.expected, comment)
 	}
 }
+
+func (s *USuite) TestWithoutElement(c *C) {
+	tcs := []struct {
+		in   []string
+		out  []string
+		flag string
+	}{
+		{in: []string{}, out: []string{}, flag: ""},
+		{in: []string{"a"}, out: []string{"a"}, flag: "--a"},
+		{in: []string{"a", "--flag=b"}, out: []string{"a"}, flag: "--flag"},
+		{in: []string{"a", "--flag", "b"}, out: []string{"a"}, flag: "--flag"},
+		{in: []string{"a", "--flag", "b", "c"}, out: []string{"a", "c"}, flag: "--flag"},
+	}
+
+	for i, t := range tcs {
+		comment := Commentf(
+			"test case #%v: removing %v from %v should = %v",
+			i, t.flag, t.in, t.out)
+		out := WithoutFlag(t.in, t.flag)
+		c.Assert(out, DeepEquals, t.out, comment)
+	}
+}
