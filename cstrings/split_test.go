@@ -16,6 +16,7 @@ limitations under the License.
 package cstrings
 
 import (
+	"strings"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -90,5 +91,27 @@ func (s *USuite) TestWithoutElement(c *C) {
 			i, t.flag, t.in, t.out)
 		out := WithoutFlag(t.in, t.flag)
 		c.Assert(out, DeepEquals, t.out, comment)
+	}
+}
+
+func (s *USuite) TestUser(c *C) {
+	tcs := []struct {
+		name     string
+		expected bool
+	}{
+		{name: "admin", expected: true},
+		{name: "centos", expected: true},
+		{name: "ubuntu-2", expected: true},
+		{name: " ", expected: false},
+		{name: " ubuntu ?", expected: false},
+		{name: strings.Repeat("a", 33), expected: false},
+	}
+
+	for i, t := range tcs {
+		comment := Commentf(
+			"test case #%v: name: %v expected %v",
+			i, t.name, t.expected)
+		valid := IsValidUnixUser(t.name)
+		c.Assert(valid, Equals, t.expected, comment)
 	}
 }
