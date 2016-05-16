@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package jsonschema
 
 import (
@@ -80,6 +81,27 @@ func (s *SchemaSuite) TestDefaults(c *C) {
             }`,
 			input:  []interface{}{map[string]interface{}{}},
 			output: []interface{}{map[string]interface{}{"val": "hello"}},
+		},
+		{
+			schema: `{
+                 "type": "object", 
+                 "default": {},
+                 "properties": {
+                     "values": {
+                        "type": "object",
+                        "default": {},
+                        "properties": {
+                           "val": {"type": "string", "default": "hellothere"}
+                        }
+                     }
+                 }
+            }`,
+			input: map[string]interface{}{},
+			output: map[string]interface{}{
+				"values": map[string]interface{}{
+					"val": "hellothere",
+				},
+			},
 		},
 		{
 			schema: `{

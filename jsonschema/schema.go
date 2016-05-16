@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package jsonschema
 
 import (
@@ -78,7 +79,13 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 	case "object":
 		vars, ok := ivars.(map[string]interface{})
 		if !ok {
-			return ivars
+			defval := schema["default"]
+			obj, ok := defval.(map[string]interface{})
+			if !isEmpty(defval) && ok {
+				vars = obj
+			} else {
+				return ivars
+			}
 		}
 		if len(vars) == 0 {
 			vars = make(map[string]interface{})
