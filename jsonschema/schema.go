@@ -18,6 +18,7 @@ package jsonschema
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -56,14 +57,22 @@ func New(data []byte) (*JSONSchema, error) {
 // ProcessObject checks if the object is valid from this schema's standpoint
 // and returns an object with defaults set up according to schema's spec
 func (j *JSONSchema) ProcessObject(in interface{}) (interface{}, error) {
-	result, err := j.schema.Validate(gojsonschema.NewGoLoader(in))
+	defaults := setDefaults(j.rawSchema, in)
+
+	result, err := j.schema.Validate(gojsonschema.NewGoLoader(defaults))
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	if !result.Valid() {
-		return nil, trace.Wrap(trace.Errorf("errors: %v", schemaErrors(result.Errors())))
+		errors := result.Errors()
+		output := make([]string, len(errors))
+		for i, err := range errors {
+			output[i] = fmt.Sprintf("%v", err)
+		}
+
+		return nil, trace.Errorf("failed to validate: %v", strings.Join(output, ","))
 	}
-	return setDefaults(j.rawSchema, in), nil
+	return defaults, nil
 }
 
 func setDefaults(ischema interface{}, ivars interface{}) interface{} {
@@ -74,8 +83,8 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 	if !ok {
 		return ivars
 	}
-	tp := getStringProp(schema, "type")
-	switch tp {
+	itemType := getStringProp(schema, "type")
+	switch itemType {
 	case "object":
 		vars, ok := ivars.(map[string]interface{})
 		if !ok {
@@ -90,8 +99,8 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 		if len(vars) == 0 {
 			vars = make(map[string]interface{})
 		}
-		props, ok := getProperties(schema, "properties")
-		if !ok {
+		var props map[string]interface{}
+		if props = getSchemaProperties(schema, vars); props == nil {
 			return ivars
 		}
 		out := make(map[string]interface{})
@@ -99,18 +108,27 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 			_, have := vars[key]
 			defval := setDefaults(prop, vars[key])
 			// only set default value if the property
-			// is missing and retunred default value is not empty
+			// is missing and returned default value is not empty
 			// otherwise we will return a bunch of nils
 			if !have && isEmpty(defval) {
 				continue
 			}
 			out[key] = defval
 		}
+		if len(out) == 0 {
+			return nil
+		}
 		return out
 	case "array":
-		vars, ok := ivars.([]interface{})
-		if !ok {
-			return ivars
+		var vars []interface{}
+		if ivars == nil {
+			vars = []interface{}{}
+		} else {
+			var ok bool
+			vars, ok = ivars.([]interface{})
+			if !ok {
+				return ivars
+			}
 		}
 		if len(vars) == 0 {
 			return ivars
@@ -135,6 +153,27 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 		return ivars
 	}
 	return ivars
+}
+
+func getSchemaProperties(schema map[string]interface{}, input map[string]interface{}) map[string]interface{} {
+	objectProperties, ok := getProperties(schema, "properties")
+	if !ok {
+		if objectProperties, ok = getProperties(schema, "patternProperties"); !ok {
+			return nil
+		}
+		// pattern properties define a single property with a name pattern;
+		// we ignore the pattern - validation will verify if it's correct
+		var property interface{}
+		for _, property = range objectProperties {
+		}
+		// override the result to contain the pattern property for each
+		// input key
+		objectProperties = map[string]interface{}{}
+		for key, _ := range input {
+			objectProperties[key] = property
+		}
+	}
+	return objectProperties
 }
 
 func isEmpty(x interface{}) bool {
@@ -167,12 +206,4 @@ func getProperties(schema map[string]interface{}, name string) (map[string]inter
 		return nil, false
 	}
 	return v, true
-}
-
-func schemaErrors(errors []gojsonschema.ResultError) string {
-	out := make([]string, len(errors))
-	for i, err := range errors {
-		out[i] = err.Description()
-	}
-	return strings.Join(out, ",")
 }
