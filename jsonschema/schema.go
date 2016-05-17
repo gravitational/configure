@@ -101,7 +101,7 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 		}
 		var props map[string]interface{}
 		if props = getSchemaProperties(schema, vars); props == nil {
-			return ivars
+			return vars
 		}
 		out := make(map[string]interface{})
 		for key, prop := range props {
