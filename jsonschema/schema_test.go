@@ -47,7 +47,7 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 		},
 		{
 			schema: `{
-                 "type": "object", 
+                 "type": "object",
                  "properties": {
                     "value": {"type": "string", "default": "hello"},
                     "value2": {"type": "string"}
@@ -60,9 +60,9 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 		},
 		{
 			schema: `{
-                 "type": "array", 
+                 "type": "array",
                  "items": {
-                    "type": "string", 
+                    "type": "string",
                     "default": "hello"
                  }
             }`,
@@ -71,9 +71,9 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 		},
 		{
 			schema: `{
-                 "type": "array", 
+                 "type": "array",
                  "items": {
-                    "type": "object", 
+                    "type": "object",
                     "properties": {
                        "val": {"type": "string", "default": "hello"}
                     }
@@ -84,7 +84,7 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 		},
 		{
 			schema: `{
-                 "type": "object", 
+                 "type": "object",
                  "default": {},
                  "properties": {
                      "values": {
@@ -105,12 +105,12 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 		},
 		{
 			schema: `{
-                 "type": "object", 
+                 "type": "object",
                  "properties": {
                      "values": {
-                        "type": "array", 
+                        "type": "array",
                          "items": {
-                             "type": "object", 
+                             "type": "object",
                              "properties": {
                                 "val": {"type": "string", "default": "hello"}
                              }
@@ -130,6 +130,16 @@ func (s *SchemaSuite) TestDefaults(c *C) {
 					},
 				},
 			},
+		},
+		{
+			schema: `{
+                 "type": "object",
+                 "properties": {
+                     "value": {"type": "string"}
+                 }
+            }`,
+			input:  map[string]interface{}{},
+			output: map[string]interface{}{},
 		},
 	}
 	for i, tc := range tcs {

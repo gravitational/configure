@@ -115,9 +115,6 @@ func setDefaults(ischema interface{}, ivars interface{}) interface{} {
 			}
 			out[key] = defval
 		}
-		if len(out) == 0 {
-			return nil
-		}
 		return out
 	case "array":
 		var vars []interface{}
