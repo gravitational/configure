@@ -99,10 +99,15 @@ func (s *USuite) TestUser(c *C) {
 		name     string
 		expected bool
 	}{
-		{name: "admin", expected: true},
-		{name: "centos", expected: true},
+		{name: "Admin", expected: true},
+		{name: "ce-nt.os", expected: true},
 		{name: "ubuntu-2", expected: true},
+		{name: "", expected: false},
 		{name: " ", expected: false},
+		{name: "-ab", expected: false},
+		{name: "a/b", expected: false},
+		{name: "a\tb", expected: false},
+		{name: "a\nb", expected: false},
 		{name: " ubuntu ?", expected: false},
 		{name: strings.Repeat("a", 33), expected: false},
 	}
