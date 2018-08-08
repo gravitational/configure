@@ -60,6 +60,7 @@ func (c *Config) Vars() map[string]string {
 	return vars
 }
 
+// EnvVars returns a map with environment variables for all parameters
 func (c *Config) EnvVars() map[string]string {
 	vars := make(map[string]string, len(c.Params))
 	for _, p := range c.Params {
@@ -69,6 +70,7 @@ func (c *Config) EnvVars() map[string]string {
 	return vars
 }
 
+// Args returns the list of arguments for all parameters
 func (c *Config) Args() []string {
 	args := []string{}
 	for _, p := range c.Params {
@@ -134,15 +136,21 @@ func SetParam(p Param, s kingpin.Settings) {
 	s.SetValue(p)
 }
 
+// Param is the command line parameter
 type Param interface {
+	// Name is the parameter's name
 	Name() string
+	// CLIName specifies the name of the parameter as given on command line
 	CLIName() string
+	// Description specifies human-friendly parameter's description
 	Description() string
 	Check() string
+	// Required is whether the parameter is required
 	Required() bool
+	// Default returns the default value for the parameter
 	Default() string
 
-	// New returns a new instance of the param identical to this
+	// New clones this parameter
 	New() Param
 
 	// Set is required to set parameters from command line string
@@ -153,12 +161,14 @@ type Param interface {
 	// Args returns argument strings in cli format
 	Args() []string
 
-	// Values returns a tuple with environment variable name and value
+	// EnvVars returns a tuple with environment variable name and value
 	EnvVars() (string, string)
 
 	// Vars returns a tuple with the variable name and value
 	Vars() (string, string)
 
+	// EnvName specifies the name of the environment variable that specifies
+	// the value for the parameter
 	EnvName() string
 }
 
@@ -336,22 +346,27 @@ type PathParam struct {
 	val *string
 }
 
+// New clones this parameter
 func (p *PathParam) New() Param {
 	return &PathParam{p.paramCommon, nil}
 }
 
+// Args returns argument strings in cli format
 func (p *PathParam) Args() []string {
 	return []string{fmt.Sprintf("--%v", p.CLIName()), p.String()}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *PathParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
 
+// Vars returns a tuple with the variable name and value
 func (p *PathParam) Vars() (string, string) {
 	return p.Name(), p.String()
 }
 
+// Set is required to set parameters from command line string
 func (p *PathParam) Set(s string) error {
 	p.val = &s
 	return nil
@@ -369,10 +384,12 @@ type StringParam struct {
 	val *string
 }
 
+// New clones this parameter
 func (p *StringParam) New() Param {
 	return &StringParam{p.paramCommon, nil}
 }
 
+// Set is required to set parameters from command line string
 func (p *StringParam) Set(s string) error {
 	p.val = &s
 	return nil
@@ -385,14 +402,17 @@ func (p *StringParam) String() string {
 	return *p.val
 }
 
+// Args returns argument strings in cli format
 func (p *StringParam) Args() []string {
 	return []string{fmt.Sprintf("--%v", p.CLIName()), p.String()}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *StringParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
 
+// Vars returns a tuple with the variable name and value
 func (p *StringParam) Vars() (string, string) {
 	return p.Name(), p.String()
 }
@@ -402,14 +422,17 @@ type BoolParam struct {
 	val *bool
 }
 
+// New clones this parameter
 func (p *BoolParam) New() Param {
 	return &BoolParam{p.paramCommon, nil}
 }
 
+// Vars returns a tuple with the variable name and value
 func (p *BoolParam) Vars() (string, string) {
 	return p.Name(), p.String()
 }
 
+// Set is required to set parameters from command line string
 func (p *BoolParam) Set(s string) error {
 	v, err := strconv.ParseBool(s)
 	if err != nil {
@@ -426,10 +449,12 @@ func (p *BoolParam) String() string {
 	return fmt.Sprintf("%v", *p.val)
 }
 
+// Args returns argument strings in cli format
 func (p *BoolParam) Args() []string {
 	return []string{fmt.Sprintf("--%v", p.CLIName()), p.String()}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *BoolParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
@@ -439,6 +464,7 @@ type IntParam struct {
 	val *int64
 }
 
+// Set is required to set parameters from command line string
 func (p *IntParam) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 64)
 	if err != nil {
@@ -455,36 +481,45 @@ func (p *IntParam) String() string {
 	return fmt.Sprintf("%v", *p.val)
 }
 
+// New clones this parameter
 func (p *IntParam) New() Param {
 	return &IntParam{p.paramCommon, nil}
 }
 
+// Args returns argument strings in cli format
 func (p *IntParam) Args() []string {
 	return []string{fmt.Sprintf("--%v", p.CLIName()), p.String()}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *IntParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
 
+// Vars returns a tuple with the variable name and value
 func (p *IntParam) Vars() (string, string) {
 	return p.Name(), p.String()
 }
 
+// ListParam defines a flag that accumulates multiple values
 type ListParam struct {
 	paramCommon
 	el     Param
 	values []Param
 }
 
+// CLIName specifies the name of the parameter as given on command line
 func (p *ListParam) CLIName() string {
 	return p.el.CLIName()
 }
 
+// EnvName specifies the name of the environment variable that specifies
+// the value for the parameter
 func (p *ListParam) EnvName() string {
 	return p.el.EnvName()
 }
 
+// Set is required to set parameters from command line string
 func (p *ListParam) Set(s string) error {
 	// this is to support setting from environment variables
 	values := cstrings.Split(',', '\\', s)
@@ -498,6 +533,7 @@ func (p *ListParam) Set(s string) error {
 	return nil
 }
 
+// New clones this parameter
 func (p *ListParam) New() Param {
 	return &ListParam{p.paramCommon, p.el, nil}
 }
@@ -513,6 +549,7 @@ func (p *ListParam) String() string {
 	return fmt.Sprintf("[%v]", strings.Join(out, ","))
 }
 
+// Args returns argument strings in cli format
 func (p *ListParam) Args() []string {
 	if len(p.values) == 0 {
 		return []string{}
@@ -524,6 +561,7 @@ func (p *ListParam) Args() []string {
 	return out
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *ListParam) EnvVars() (string, string) {
 	if len(p.values) == 0 {
 		return p.EnvName(), p.Default()
@@ -535,6 +573,7 @@ func (p *ListParam) EnvVars() (string, string) {
 	return p.el.EnvName(), strings.Join(out, ",")
 }
 
+// Vars returns a tuple with the variable name and value
 func (p *ListParam) Vars() (string, string) {
 	if len(p.values) == 0 {
 		return p.Name(), p.Default()
@@ -544,6 +583,12 @@ func (p *ListParam) Vars() (string, string) {
 		_, out[i] = v.EnvVars()
 	}
 	return p.Name(), strings.Join(out, ",")
+}
+
+// IsCumulative determines whether the flag is cumulative - i.e. can be specified multiple times.
+// Implements kingpin.repeatableFlag
+func (p *ListParam) IsCumulative() bool {
+	return true
 }
 
 type KVParam struct {
@@ -560,6 +605,7 @@ func (p *KVParam) sep() string {
 	return ""
 }
 
+// Set is required to set parameters from command line string
 func (p *KVParam) Set(s string) error {
 	sep := p.sep()
 
@@ -592,6 +638,7 @@ func (p *KVParam) String() string {
 	return fmt.Sprintf("{%v}", strings.Join(out, p.sep()))
 }
 
+// New clones this parameter
 func (p *KVParam) New() Param {
 	keys := make([]Param, len(p.keys))
 	for i, k := range p.keys {
@@ -600,6 +647,7 @@ func (p *KVParam) New() Param {
 	return &KVParam{p.paramCommon, p.separator, keys, nil}
 }
 
+// Args returns argument strings in cli format
 func (p *KVParam) Args() []string {
 	if len(p.values) == 0 {
 		return []string{}
@@ -612,6 +660,7 @@ func (p *KVParam) Args() []string {
 		fmt.Sprintf("--%v", p.CLIName()), strings.Join(vals, p.sep())}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *KVParam) EnvVars() (string, string) {
 	if len(p.values) == 0 {
 		return p.EnvName(), p.Default()
@@ -640,6 +689,7 @@ type EnumParam struct {
 	value  *string
 }
 
+// Set is required to set parameters from command line string
 func (p *EnumParam) Set(s string) error {
 	found := false
 	for _, v := range p.values {
@@ -664,10 +714,12 @@ func (p *EnumParam) String() string {
 	return *p.value
 }
 
+// New clones this parameter
 func (p *EnumParam) New() Param {
 	return &EnumParam{p.paramCommon, p.values, nil}
 }
 
+// Args returns argument strings in cli format
 func (p *EnumParam) Args() []string {
 	if p.value == nil {
 		return []string{}
@@ -675,6 +727,7 @@ func (p *EnumParam) Args() []string {
 	return []string{fmt.Sprintf("--%v", p.CLIName()), *p.value}
 }
 
+// EnvVars returns a tuple with environment variable name and value
 func (p *EnumParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
 }
