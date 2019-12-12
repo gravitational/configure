@@ -432,7 +432,8 @@ func (p *BoolParam) Vars() (string, string) {
 	return p.Name(), p.String()
 }
 
-// Set is required to set parameters from command line string
+// Set is required to set parameters from command line string.
+// Implements kingpin.Value
 func (p *BoolParam) Set(s string) error {
 	v, err := strconv.ParseBool(s)
 	if err != nil {
@@ -442,6 +443,8 @@ func (p *BoolParam) Set(s string) error {
 	return nil
 }
 
+// String returns the value of this flag as text.
+// Implements kingpin.Value
 func (p *BoolParam) String() string {
 	if p.val == nil {
 		return "false"
@@ -457,6 +460,12 @@ func (p *BoolParam) Args() []string {
 // EnvVars returns a tuple with environment variable name and value
 func (p *BoolParam) EnvVars() (string, string) {
 	return p.EnvName(), p.String()
+}
+
+// IsBoolFlag marks this parameter as boolean flag
+// Implements kingpin.boolFlag
+func (p *BoolParam) IsBoolFlag() bool {
+	return true
 }
 
 type IntParam struct {
