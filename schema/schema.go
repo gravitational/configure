@@ -454,7 +454,10 @@ func (p *BoolParam) String() string {
 
 // Args returns argument strings in cli format
 func (p *BoolParam) Args() []string {
-	return []string{fmt.Sprintf("--%v", p.CLIName()), p.String()}
+	if p.val == nil || !*p.val {
+		return []string{fmt.Sprintf("--no-%v", p.CLIName())}
+	}
+	return []string{fmt.Sprintf("--%v", p.CLIName())}
 }
 
 // EnvVars returns a tuple with environment variable name and value
