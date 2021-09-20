@@ -44,7 +44,7 @@ func ParseCommandLine(v interface{}, args []string) error {
 func NewCommandLineApp(v interface{}) (*kingpin.Application, error) {
 	s := reflect.ValueOf(v).Elem()
 	app := kingpin.New("app", "Auto generated command line application")
-	if err := setupApp(app, s); err != nil {
+	if err := setupApp(app, s, ""); err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return app, nil
@@ -55,8 +55,10 @@ type CLISetter interface {
 	SetCLI(string) error
 }
 
-func setupApp(app *kingpin.Application, v reflect.Value) error {
+func setupApp(app *kingpin.Application, v reflect.Value, prefix string) error {
 	// for structs, walk every element and parse
+	var f *kingpin.FlagClause
+
 	vType := v.Type()
 	if v.Kind() != reflect.Struct {
 		return nil
@@ -68,26 +70,40 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 			continue
 		}
 		kind := field.Kind()
-		if kind == reflect.Struct {
-			if err := setupApp(app, field); err != nil {
-				return trace.Wrap(err,
-					fmt.Sprintf("failed parsing struct field %v",
-						structField.Name))
-			}
-		}
 		cliFlag := structField.Tag.Get("cli")
 		if cliFlag == "" {
 			continue
 		}
+		//if cli flag is set to - on the struct, then reset the prefix
+		if cliFlag == "-" && kind == reflect.Struct {
+			prefix = ""
+		} else {
+			if prefix == "" || kind == reflect.Struct {
+				prefix = cliFlag
+			} else {
+				cliFlag = strings.Join([]string{prefix, cliFlag}, ".")
+			}
+		}
+
+		// if kind == reflect.Struct {
+		// 	if err := setupApp(app, field, prefix); err != nil {
+		// 		return trace.Wrap(err,
+		// 			fmt.Sprintf("failed parsing struct field %v",
+		// 				structField.Name))
+		// 	}
+		// }
+
 		if !field.CanAddr() {
 			continue
 		}
 		cliFlagDescription := structField.Tag.Get("description")
 		if cliFlagDescription == "" {
-			cliFlagDescription = cliFlag		
+			cliFlagDescription = cliFlag
 		}
-		
-		f := app.Flag(cliFlag, cliFlagDescription)
+
+		if kind != reflect.Struct {
+			f = app.Flag(cliFlag, cliFlagDescription)
+		}
 		fieldPtr := field.Addr().Interface()
 		if setter, ok := fieldPtr.(CLISetter); ok {
 			f.SetValue(&cliValue{setter: setter})
@@ -118,7 +134,12 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 		case *bool:
 			f.SetValue(&cliBoolValue{v: ptr})
 		default:
-			return trace.Errorf("unsupported type: %T", ptr)
+			if err := setupApp(app, field, prefix); err != nil {
+				return trace.Wrap(err,
+					fmt.Sprintf("failed parsing struct field %v",
+						structField.Name))
+			}
+			// return trace.Errorf("unsupported type: %T", ptr)
 		}
 	}
 	return nil
