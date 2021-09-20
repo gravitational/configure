@@ -82,7 +82,12 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 		if !field.CanAddr() {
 			continue
 		}
-		f := app.Flag(cliFlag, cliFlag)
+		cliFlagDescription := structField.Tag.Get("description")
+		if cliFlagDescription == "" {
+			cliFlagDescription = cliFlag		
+		}
+		
+		f := app.Flag(cliFlag, cliFlagDescription)
 		fieldPtr := field.Addr().Interface()
 		if setter, ok := fieldPtr.(CLISetter); ok {
 			f.SetValue(&cliValue{setter: setter})
