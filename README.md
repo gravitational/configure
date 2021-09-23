@@ -7,7 +7,7 @@ It works by reading a struct definition with special tags.
 
 The latest can be seen if you run:
 ```
-godoc github.com/gravitational/configure
+godoc github.com/hzakher/configure
 ```
 
 But here's a quickstart: Define a sample structure, for example:
@@ -28,7 +28,7 @@ Then you can query the environment and populate that structure from environment 
 ```go
 	import (
 	   "os"
-	   "github.com/gravitational/configure"
+	   "github.com/hzakher/configure"
 	)
 
 	func main() {

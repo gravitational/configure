@@ -16,9 +16,16 @@ limitations under the License.
 package configure
 
 import (
-	"gopkg.in/yaml.v2"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+	"text/template"
 
-	"github.com/gravitational/trace"
+	"github.com/hzakher/configure/cstrings"
+	"gopkg.in/yaml.v2"
+	// "github.com/narisongdev/yaml"
 )
 
 // ParseYAML parses yaml-encoded byte string into the struct
@@ -28,18 +35,19 @@ import (
 // environment variable "VAR" and pass it to YAML file parser
 func ParseYAML(data []byte, cfg interface{}, funcArgs ...ParseOption) error {
 	var opts parseOptions
+	// yaml.Tag = "config"
 	for _, fn := range funcArgs {
 		fn(&opts)
 	}
 	var err error
 	if opts.templating {
 		if data, err = renderTemplate(data); err != nil {
-			return trace.Wrap(err)
+			return err
 		}
 	}
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -60,4 +68,78 @@ func EnableTemplating() ParseOption {
 	return func(p *parseOptions) {
 		p.templating = true
 	}
+}
+
+func renderTemplate(data []byte) ([]byte, error) {
+	t := template.New("tpl")
+	c, err := newCtx()
+	if err != nil {
+		return nil, err
+	}
+	t.Funcs(map[string]interface{}{
+		"env":  c.Env,
+		"file": c.File,
+	})
+	t, err = t.Parse(string(data))
+	if err != nil {
+		return nil, err
+	}
+	buf := &bytes.Buffer{}
+	if err := t.Execute(buf, nil); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func newCtx() (*ctx, error) {
+	values := os.Environ()
+	c := &ctx{
+		env: make(map[string]string, len(values)),
+	}
+	for _, v := range values {
+		vals := strings.SplitN(v, "=", 2)
+		if len(vals) != 2 {
+			return nil, fmt.Errorf("failed to parse variable: '%v'", v)
+		}
+		c.env[vals[0]] = vals[1]
+	}
+	return c, nil
+}
+
+type ctx struct {
+	env map[string]string
+}
+
+func (c *ctx) File(path string) (string, error) {
+	o, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", cstrings.Wrap(err, fmt.Sprintf("reading file: %v", path))
+	}
+	return string(o), nil
+}
+
+func (c *ctx) Env(key string) (string, error) {
+	v, ok := c.env[key]
+	if !ok {
+		return "", fmt.Errorf("environment variable '%v' is not set", key)
+	}
+	values := cstrings.SplitComma(v)
+	out := make([]string, len(values))
+	for i, p := range values {
+		out[i] = quoteYAML(p)
+	}
+	return strings.Join(out, ","), nil
+}
+
+func quoteYAML(val string) string {
+	if len(val) == 0 {
+		return val
+	}
+	if strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'") {
+		return val
+	}
+	if strings.ContainsAny(val, ":") {
+		return "'" + val + "'"
+	}
+	return val
 }

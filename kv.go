@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gravitational/configure/cstrings"
-	"github.com/gravitational/trace"
+	"github.com/hzakher/configure/cstrings"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -38,7 +37,7 @@ func (kv *KeyVal) Set(v string) error {
 	for _, i := range cstrings.SplitComma(v) {
 		vals := strings.SplitN(i, ":", 2)
 		if len(vals) != 2 {
-			return trace.Errorf("extra options should be defined like KEY:VAL")
+			return fmt.Errorf("extra options should be defined like KEY:VAL")
 		}
 		(*kv)[vals[0]] = vals[1]
 	}
@@ -48,7 +47,7 @@ func (kv *KeyVal) Set(v string) error {
 // SetEnv sets the value from environment variable using json encoding
 func (kv *KeyVal) SetEnv(v string) error {
 	if err := json.Unmarshal([]byte(v), &kv); err != nil {
-		return trace.Wrap(
+		return cstrings.Wrap(
 			err, "failed to parse environment variable, expected JSON map")
 	}
 	return nil
@@ -81,7 +80,7 @@ func (kv *KeyValSlice) Set(v string) error {
 	}
 	var i KeyVal
 	if err := i.Set(v); err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*kv = append(*kv, i)
 	return nil
@@ -90,7 +89,7 @@ func (kv *KeyValSlice) Set(v string) error {
 // SetEnv sets the value from environment variable using json encoding
 func (kv *KeyValSlice) SetEnv(v string) error {
 	if err := json.Unmarshal([]byte(v), &kv); err != nil {
-		return trace.Wrap(
+		return cstrings.Wrap(
 			err, "failed to parse environment variable, expected JSON map")
 	}
 	return nil

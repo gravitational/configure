@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gravitational/trace"
+	"github.com/hzakher/configure/cstrings"
 )
 
 // ParseEnv takes a pointer to a struct and attempts
@@ -33,7 +33,7 @@ func ParseEnv(v interface{}) error {
 		return err
 	}
 	s := reflect.ValueOf(v).Elem()
-	return setEnv(s, env)
+	return setEnv(s, env, "")
 }
 
 // Setter is an interface that properties of struct can implement
@@ -47,7 +47,7 @@ type StringSetter interface {
 	Set(string) error
 }
 
-func setEnv(v reflect.Value, env map[string]string) error {
+func setEnv(v reflect.Value, env map[string]string, prefix string) error {
 	// for structs, walk every element and parse
 	vType := v.Type()
 	if v.Kind() != reflect.Struct {
@@ -60,42 +60,69 @@ func setEnv(v reflect.Value, env map[string]string) error {
 			continue
 		}
 		kind := field.Kind()
-		if kind == reflect.Struct {
-			if err := setEnv(field, env); err != nil {
-				return trace.Wrap(err,
-					fmt.Sprintf("failed parsing struct field %v",
-						structField.Name))
-			}
-		}
-		envKey := structField.Tag.Get("env")
-
-		if envKey == "" {
+		// if kind == reflect.Struct {
+		// 	if err := setEnv(field, env, prefix); err != nil {
+		// 		return cstrings.Wrap(err,
+		// 			fmt.Sprintf("failed parsing struct field %v",
+		// 				structField.Name))
+		// 	}
+		// }
+		envKey := structField.Tag.Get("config")
+		envSkipKey := structField.Tag.Get("env")
+		if envKey == "" || envSkipKey == "-" {
 			continue
 		}
+
+		//if cli flag is set to - on the struct, then reset the prefix
+		if envKey == "-" && kind == reflect.Struct {
+			prefix = ""
+		} else {
+			if prefix == "" && kind == reflect.Struct {
+				prefix = envKey
+			} else if prefix != "" {
+				envKey = strings.Join([]string{prefix, envKey}, ".")
+			}
+		}
+
+		_, ok := env[envKey]
+		envDefault := structField.Tag.Get("default")
+		if !ok && kind != reflect.Struct {
+			if envDefault != "" {
+				env[envKey] = envDefault
+			}
+		}
+
 		val, ok := env[envKey]
 		if !ok || val == "" { // assume defaults
 			continue
 		}
+
 		if field.CanAddr() {
 			if s, ok := field.Addr().Interface().(EnvSetter); ok {
 				if err := s.SetEnv(val); err != nil {
-					return trace.Wrap(err)
+					return err
 				}
 				continue
 			}
 			if s, ok := field.Addr().Interface().(StringSetter); ok {
 				if err := s.Set(val); err != nil {
-					return trace.Wrap(err)
+					return err
 				}
 				continue
 			}
 		}
 		switch kind {
+		case reflect.Struct:
+			if err := setEnv(field, env, prefix); err != nil {
+				return cstrings.Wrap(err,
+					fmt.Sprintf("failed parsing struct field %v",
+						structField.Name))
+			}
 		case reflect.Slice:
 			if _, ok := field.Interface().([]map[string]string); ok {
 				var kv KeyValSlice
 				if err := kv.SetEnv(val); err != nil {
-					return trace.Wrap(err, "error parsing key value list")
+					return cstrings.Wrap(err, "error parsing key value list")
 				}
 				field.Set(reflect.ValueOf([]map[string]string(kv)))
 			}
@@ -103,14 +130,14 @@ func setEnv(v reflect.Value, env map[string]string) error {
 			if _, ok := field.Interface().(map[string]string); ok {
 				var kv KeyVal
 				if err := kv.SetEnv(val); err != nil {
-					return trace.Wrap(err, "error parsing key value list")
+					return cstrings.Wrap(err, "error parsing key value list")
 				}
 				field.Set(reflect.ValueOf(map[string]string(kv)))
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			intValue, err := strconv.ParseInt(val, 0, field.Type().Bits())
 			if err != nil {
-				return trace.Wrap(err)
+				return err
 			}
 			field.SetInt(intValue)
 		case reflect.String:
@@ -118,7 +145,7 @@ func setEnv(v reflect.Value, env map[string]string) error {
 		case reflect.Bool:
 			boolVal, err := strconv.ParseBool(val)
 			if err != nil {
-				return trace.Wrap(
+				return cstrings.Wrap(
 					err,
 					fmt.Sprintf("failed parsing struct field %v, expected bool, got '%v'",
 						structField.Name, val))
@@ -135,7 +162,7 @@ func parseEnvironment() (map[string]string, error) {
 	for _, v := range values {
 		vals := strings.SplitN(v, "=", 2)
 		if len(vals) != 2 {
-			return nil, trace.Errorf("failed to parse variable: '%v'", v)
+			return nil, fmt.Errorf("failed to parse variable: '%v'", v)
 		}
 		env[vals[0]] = vals[1]
 	}
