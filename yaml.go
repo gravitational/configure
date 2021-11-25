@@ -24,7 +24,8 @@ import (
 	"text/template"
 
 	"github.com/hzakher/configure/cstrings"
-	"gopkg.in/yaml.v2"
+	//"gopkg.in/yaml.v2"
+	"github.com/hzakher/yaml/v2"
 	// "github.com/narisongdev/yaml"
 )
 
