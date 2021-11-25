@@ -36,7 +36,7 @@ import (
 // environment variable "VAR" and pass it to YAML file parser
 func ParseYAML(data []byte, cfg interface{}, funcArgs ...ParseOption) error {
 	var opts parseOptions
-	// yaml.Tag = "config"
+	yaml.SetTag("config")
 	for _, fn := range funcArgs {
 		fn(&opts)
 	}
