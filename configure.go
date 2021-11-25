@@ -2,34 +2,30 @@ package configure
 
 import (
 	"io/ioutil"
-	"path/filepath"
+
+	yaml "github.com/hzakher/yaml/v2"
 )
 
-// ParseConfig takes filename of yml config file, and cli args (e.g. os.Args[1:])
-// it calls ParseYAML, ParseEnv, ParseCommandLine
-// this is in order to load config in cli -> env -> config order of precedence
-func ParseConfig(filename string, args []string) (cfg interface{}, err error) {
+const Tag = "config"
 
-	filefullname, _ := filepath.Abs(filename)
-	data, err := ioutil.ReadFile(filefullname)
-	if err != nil {
-		return nil, err
+// ParseYAML parses yaml-encoded byte string into the struct
+// passed to the function.
+// EnableTemplating() argument allows to treat configuration file as a template
+// for example, it will support {{env "VAR"}} - that will substitute
+// environment variable "VAR" and pass it to YAML file parser
+func ParseYAML(data []byte, cfg interface{}) error {
+	yaml.SetTag(Tag)
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return err
 	}
+	return nil
+}
 
-	err = ParseYAML(data, &cfg)
+func SaveYAML(filename string, cfg interface{}) error {
+	yaml.SetTag(Tag)
+	bytes, err := yaml.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	err = ParseEnv(&cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ParseCommandLine(&cfg, args)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return ioutil.WriteFile(filename, bytes, 0644)
 }

@@ -67,7 +67,7 @@ func setEnv(v reflect.Value, env map[string]string, prefix string) error {
 		// 				structField.Name))
 		// 	}
 		// }
-		envKey := structField.Tag.Get("config")
+		envKey := structField.Tag.Get(Tag)
 		envSkipKey := structField.Tag.Get("env")
 		if envKey == "" || envSkipKey == "-" {
 			continue
@@ -86,6 +86,17 @@ func setEnv(v reflect.Value, env map[string]string, prefix string) error {
 
 		_, ok := env[envKey]
 		envDefault := structField.Tag.Get("default")
+		// 		sRequired := structField.Tag.Get("required")
+		// 		isRequired, err := strconv.ParseBool(sRequired)
+		//
+		// 		if err != nil && isRequired {
+		// 			if !ok && kind != reflect.Struct {
+		// 				//this is required and missing, return error
+		// 				err := fmt.Errorf("required field  %v is missing", envKey)
+		// 				return err
+		// 			}
+		// 		}
+
 		if !ok && kind != reflect.Struct {
 			if envDefault != "" {
 				env[envKey] = envDefault

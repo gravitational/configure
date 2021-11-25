@@ -76,7 +76,7 @@ func setupApp(app *kingpin.Application, v reflect.Value, prefix string) error {
 			prefix = ""
 		}
 
-		cliFlag := structField.Tag.Get("config")
+		cliFlag := structField.Tag.Get(Tag)
 		cliSkipFlag := structField.Tag.Get("cli")
 		if cliFlag == "" || cliSkipFlag == "-" {
 			continue
@@ -95,17 +95,23 @@ func setupApp(app *kingpin.Application, v reflect.Value, prefix string) error {
 		if !field.CanAddr() {
 			continue
 		}
-		cliFlagDescription := structField.Tag.Get("description")
+		cliFlagDescription := structField.Tag.Get("help")
 		if cliFlagDescription == "" {
 			cliFlagDescription = cliFlag
 		}
 
 		cliDefault := structField.Tag.Get("default")
+		// sRequired := structField.Tag.Get("required")
 		if kind != reflect.Struct {
 			f = app.Flag(cliFlag, cliFlagDescription)
 			if cliDefault != "" {
 				f = f.Default(cliDefault)
 			}
+
+			// isRequired, err := strconv.ParseBool(sRequired)
+			// if err != nil && isRequired {
+			// 	f = f.Required()
+			// }
 		}
 
 		fieldPtr := field.Addr().Interface()
