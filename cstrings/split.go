@@ -44,36 +44,37 @@ func Split(delim, escape rune, v string) []string {
 	return out
 }
 
-// SplitAt splits array of strings at a given separator
-func SplitAt(args []string, sep string) ([]string, []string) {
-	index := -1
-	for i, a := range args {
-		if a == sep {
-			index = i
-			break
-		}
-	}
-	if index == -1 {
-		return args, []string{}
-	}
-	return args[:index], args[index+1:]
-}
-
-// WithoutFlag removes the flag from the argument list
-func WithoutFlag(args []string, flag string) []string {
-	out := make([]string, 0, len(args))
-	for i := 0; i < len(args); i += 1 {
-		val := args[i]
-		if !strings.HasPrefix(val, flag) {
-			out = append(out, val)
-		} else {
-			if !strings.Contains(val, "=") && i+1 <= len(args)-1 {
-				i += 1
-			}
-		}
-	}
-	return out
-}
+//
+// // SplitAt splits array of strings at a given separator
+// func SplitAt(args []string, sep string) ([]string, []string) {
+// 	index := -1
+// 	for i, a := range args {
+// 		if a == sep {
+// 			index = i
+// 			break
+// 		}
+// 	}
+// 	if index == -1 {
+// 		return args, []string{}
+// 	}
+// 	return args[:index], args[index+1:]
+// }
+//
+// // WithoutFlag removes the flag from the argument list
+// func WithoutFlag(args []string, flag string) []string {
+// 	out := make([]string, 0, len(args))
+// 	for i := 0; i < len(args); i += 1 {
+// 		val := args[i]
+// 		if !strings.HasPrefix(val, flag) {
+// 			out = append(out, val)
+// 		} else {
+// 			if !strings.Contains(val, "=") && i+1 <= len(args)-1 {
+// 				i += 1
+// 			}
+// 		}
+// 	}
+// 	return out
+// }
 
 type splitter struct {
 	delim  rune

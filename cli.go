@@ -21,8 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gravitational/configure/cstrings"
-	"github.com/gravitational/trace"
+	"github.com/hzakher/configure/cstrings"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -31,10 +30,10 @@ import (
 func ParseCommandLine(v interface{}, args []string) error {
 	app, err := NewCommandLineApp(v)
 	if err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	if _, err := app.Parse(args); err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -44,8 +43,8 @@ func ParseCommandLine(v interface{}, args []string) error {
 func NewCommandLineApp(v interface{}) (*kingpin.Application, error) {
 	s := reflect.ValueOf(v).Elem()
 	app := kingpin.New("app", "Auto generated command line application")
-	if err := setupApp(app, s); err != nil {
-		return nil, trace.Wrap(err)
+	if err := setupApp(app, s, ""); err != nil {
+		return nil, cstrings.Wrap(err)
 	}
 	return app, nil
 }
@@ -55,8 +54,10 @@ type CLISetter interface {
 	SetCLI(string) error
 }
 
-func setupApp(app *kingpin.Application, v reflect.Value) error {
+func setupApp(app *kingpin.Application, v reflect.Value, prefix string) error {
 	// for structs, walk every element and parse
+	var f *kingpin.FlagClause
+
 	vType := v.Type()
 	if v.Kind() != reflect.Struct {
 		return nil
@@ -68,21 +69,51 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 			continue
 		}
 		kind := field.Kind()
+
+		//reset prefix when we have struct.
+		// we will then set it if we have cli-flag
 		if kind == reflect.Struct {
-			if err := setupApp(app, field); err != nil {
-				return trace.Wrap(err,
-					fmt.Sprintf("failed parsing struct field %v",
-						structField.Name))
-			}
+			prefix = ""
 		}
-		cliFlag := structField.Tag.Get("cli")
-		if cliFlag == "" {
+
+		cliFlag := structField.Tag.Get(Tag)
+		cliSkipFlag := structField.Tag.Get("cli")
+		if cliFlag == "" || cliSkipFlag == "-" {
 			continue
 		}
+		//if cli flag is set to - on the struct, then reset the prefix
+		if cliFlag == "-" && kind == reflect.Struct {
+			prefix = ""
+		} else {
+			if prefix == "" && kind == reflect.Struct {
+				prefix = cliFlag
+			} else if prefix != "" {
+				cliFlag = strings.Join([]string{prefix, cliFlag}, ".")
+			}
+		}
+
 		if !field.CanAddr() {
 			continue
 		}
-		f := app.Flag(cliFlag, cliFlag)
+		cliFlagDescription := structField.Tag.Get("help")
+		if cliFlagDescription == "" {
+			cliFlagDescription = cliFlag
+		}
+
+		cliDefault := structField.Tag.Get("default")
+		// sRequired := structField.Tag.Get("required")
+		if kind != reflect.Struct {
+			f = app.Flag(cliFlag, cliFlagDescription)
+			if cliDefault != "" {
+				f = f.Default(cliDefault)
+			}
+
+			// isRequired, err := strconv.ParseBool(sRequired)
+			// if err != nil && isRequired {
+			// 	f = f.Required()
+			// }
+		}
+
 		fieldPtr := field.Addr().Interface()
 		if setter, ok := fieldPtr.(CLISetter); ok {
 			f.SetValue(&cliValue{setter: setter})
@@ -113,7 +144,12 @@ func setupApp(app *kingpin.Application, v reflect.Value) error {
 		case *bool:
 			f.SetValue(&cliBoolValue{v: ptr})
 		default:
-			return trace.Errorf("unsupported type: %T", ptr)
+			if err := setupApp(app, field, prefix); err != nil {
+				return cstrings.Wrap(err,
+					fmt.Sprintf("failed parsing struct field %v",
+						structField.Name))
+			}
+			// return trace.Errorf("unsupported type: %T", ptr)
 		}
 	}
 	return nil
@@ -162,7 +198,7 @@ func setMap(kv *map[string]string, val string) error {
 	for _, i := range cstrings.SplitComma(val) {
 		vals := strings.SplitN(i, ":", 2)
 		if len(vals) != 2 {
-			return trace.Errorf("extra options should be defined like KEY:VAL")
+			return fmt.Errorf("extra options should be defined like KEY:VAL")
 		}
 		(*kv)[vals[0]] = vals[1]
 	}
@@ -187,7 +223,7 @@ func (c *cliSliceMapValue) Set(v string) error {
 	}
 	var kv map[string]string
 	if err := setMap(&kv, v); err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*c.v = append(*c.v, kv)
 	return nil
@@ -217,7 +253,7 @@ func (c *cliIntValue) String() string {
 func (c *cliIntValue) Set(v string) error {
 	intValue, err := strconv.ParseInt(v, 0, 0)
 	if err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*c.v = int(intValue)
 	return nil
@@ -235,7 +271,7 @@ func (c *cliInt64Value) String() string {
 func (c *cliInt64Value) Set(v string) error {
 	intValue, err := strconv.ParseInt(v, 0, 64)
 	if err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*c.v = intValue
 	return nil
@@ -253,7 +289,7 @@ func (c *cliInt32Value) String() string {
 func (c *cliInt32Value) Set(v string) error {
 	intValue, err := strconv.ParseInt(v, 0, 32)
 	if err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*c.v = int32(intValue)
 	return nil
@@ -270,7 +306,7 @@ func (c *cliBoolValue) String() string {
 func (c *cliBoolValue) Set(v string) error {
 	boolVal, err := strconv.ParseBool(v)
 	if err != nil {
-		return trace.Wrap(err)
+		return err
 	}
 	*c.v = boolVal
 	return nil
